@@ -6,7 +6,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
 # إعداد
-BOT_TOKEN = "توكن_البوت_هنا"  # ← ضع توكن بوتك هنا
+BOT_TOKEN = "8233070429:AAHVBoHWSnbw6odpskMpvIyRWUJXRHv8OtE"
 COOKIES_DIR = "cookies"
 ACCOUNTS_FILE = "accounts.json"
 
@@ -14,7 +14,7 @@ ACCOUNTS_FILE = "accounts.json"
 def create_driver():
     options = Options()
     options.add_argument("--start-maximized")
-    service = Service("chromedriver")  # ← عدل المسار إذا كنت تستخدم مجلد مختلف
+    service = Service("chromedriver")  # تأكد أن chromedriver بجانب الملف
     return webdriver.Chrome(service=service, options=options)
 
 # ⬛ تحميل الحسابات
@@ -67,9 +67,43 @@ def do_action(driver, target, follow=True):
     except Exception as e:
         return f"❌ فشل: {str(e)}"
 
+# ⬛ تسجيل الدخول تلقائيًا
+def login_with_credentials(driver, username, password):
+    driver.get("https://www.tiktok.com/login/phone-or-email/email")
+    time.sleep(5)
+    try:
+        user_input = driver.find_element("name", "email")
+        user_input.send_keys(username)
+        time.sleep(1)
+
+        pass_input = driver.find_element("name", "password")
+        pass_input.send_keys(password)
+        time.sleep(1)
+
+        login_button = driver.find_element("xpath", '//button[@type="submit"]')
+        login_button.click()
+
+        time.sleep(10)
+        if "login" not in driver.current_url:
+            return True
+        else:
+            return False
+    except Exception as e:
+        print("خطأ أثناء تسجيل الدخول:", e)
+        return False
+
 # 🟩 أمر /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🤖 مرحباً! أرسل:\n- تسجيل @username\n- تابع @user\n- الغِ @user\n- عدد\n- حذف @username")
+    await update.message.reply_text(
+        "🤖 مرحباً بك!\n\n"
+        "الأوامر:\n"
+        "- تسجيل @username ← تسجيل دخول يدوي\n"
+        "- دخول username|password ← تسجيل تلقائي\n"
+        "- تابع @user ← متابعة\n"
+        "- الغِ @user ← إلغاء متابعة\n"
+        "- عدد ← عدد الحسابات\n"
+        "- حذف @username ← حذف حساب"
+    )
 
 # 🟩 التعامل مع الرسائل
 async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -83,13 +117,30 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         driver = create_driver()
         driver.get("https://www.tiktok.com/login")
-        await update.message.reply_text(f"🔐 افتح المتصفح وسجّل الدخول للحساب {username}، ثم ارجع واضغط Enter هنا في التيرمنال.")
+        await update.message.reply_text(f"🔐 افتح المتصفح وسجّل الدخول يدويًا للحساب {username} ثم اضغط Enter في الطرفية.")
         input("🖱️ اضغط Enter بعد تسجيل الدخول...")
         save_cookies(driver, username)
         driver.quit()
         accounts.append({"username": username})
         save_accounts(accounts)
         await update.message.reply_text(f"✅ تم حفظ الحساب {username}.")
+
+    elif text.startswith("دخول "):
+        try:
+            creds = text.replace("دخول ", "").strip()
+            username, password = creds.split("|")
+            driver = create_driver()
+            ok = login_with_credentials(driver, username, password)
+            if ok:
+                save_cookies(driver, username)
+                accounts.append({"username": username})
+                save_accounts(accounts)
+                await update.message.reply_text(f"✅ تم تسجيل الدخول وحفظ الحساب {username}")
+            else:
+                await update.message.reply_text("❌ فشل في تسجيل الدخول، تحقق من كلمة السر أو وجود حماية.")
+            driver.quit()
+        except Exception as e:
+            await update.message.reply_text(f"❌ خطأ: {str(e)}")
 
     elif text.startswith("تابع @") or text.startswith("الغِ @"):
         follow = text.startswith("تابع")
