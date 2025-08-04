@@ -6,7 +6,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
 # إعداد
-BOT_TOKEN = "8233070429:AAHVBoHWSnbw6odpskMpvIyRWUJXRHv8OtE"
+BOT_TOKEN = "8175697399:AAGClAMq4VV6Uw7gjdhuS3r20dKrO8beyn8"
 COOKIES_DIR = "cookies"
 ACCOUNTS_FILE = "accounts.json"
 
